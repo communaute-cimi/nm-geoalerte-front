@@ -174,7 +174,6 @@ function postFeature(callback, scope, params) {
 function postFeatureCallback(data) {
   console.log(data);
   $('#panelProperties').addClass('hidden');
-  this.control.control();
 };
 
 /**
@@ -200,9 +199,9 @@ polygonTool.onclick = function(e) {
 
 
 //chargement des couches externes
-function loadLayerBouchon(){
-  var data = '{"id":2,"message":"Projet 42 en cours, DO NOT DISTURB !!!","geom":[2.2027587890625004,48.91031590355533],"long_message":"Ceci est une alerte de ecole 42.","url":"http:\/\/www.paris.fr\/necmergitur","category":"Hackathon"}';
-  data = JSON.parse( data );
+function loadLayerBouchon() {
+  var data = '[{"id":2,"message":"Projet 42 en cours, DO NOT DISTURB !!!","geom":[2.2027587890625004,48.91031590355533],"long_message":"Ceci est une alerte de ecole 42.","url":"http:\/\/www.paris.fr\/necmergitur","category":"Hackathon"}]';
+  data = JSON.parse(data);
   loadLayerCallBack(data);
 }
 
@@ -246,20 +245,20 @@ function loadLayerCallBack(data) {
   var layer = new ol.layer.Vector({
     source: vectorSource,
     style: new ol.style.Style({
-    fill: new ol.style.Fill({
-      color: 'red'
-    }),
-    stroke: new ol.style.Stroke({
-      color: 'red',
-      width: 2
-    }),
-    image: new ol.style.Circle({
-      radius: 7,
       fill: new ol.style.Fill({
         color: 'red'
+      }),
+      stroke: new ol.style.Stroke({
+        color: 'red',
+        width: 2
+      }),
+      image: new ol.style.Circle({
+        radius: 7,
+        fill: new ol.style.Fill({
+          color: 'red'
+        })
       })
     })
-  })
   });
 
   map.addLayer(layer);
@@ -270,18 +269,16 @@ function loadLayerCallBack(data) {
  * Renvoi la source de la layer
  */
 function getVectorSource(data) {
-  var feature = new ol.Feature({
-  geometry: new ol.geom.Point(data.geom).transform('EPSG:4326','EPSG:3857'),
-  name: 'My Polygon'
-});
+  var features = [];
 
-  // var vectorSource = new ol.source.Vector({
-  //   features: (new ol.format.GeoJSON()).readFeatures(data, {
-  //     dataProjection: 'EPSG:4326',
-  //     featureProjection: 'EPSG:3857'
-  //   })
-  // });
-  var features = [feature];
+  for (var idx in data) {
+    var feature = new ol.Feature({
+    geometry: new ol.geom.Point(data[idx].geom).transform('EPSG:4326', 'EPSG:3857'),
+    name: data[idx].id
+  });
+    features.push(feature);
+  }
+
   var vectorSource = new ol.source.Vector({
     features: features
   });
