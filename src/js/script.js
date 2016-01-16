@@ -1,5 +1,5 @@
 //Variable globale:
-var URL_API;
+var URL_API = "http://192.168.99.100:8000/public/alerts";
 var feature;
 var draw;
 
@@ -59,7 +59,8 @@ var map = new ol.Map({
   })
 });
 
-loadLayerBouchon();
+//loadLayerBouchon();
+loadLayer();
 
 
 
@@ -122,6 +123,7 @@ function saveFeature() {
   //Transformation de la feature en geoJSON
   var featureAsGeoJSON = getFeatureAsGeoJSON(feature);
   console.log(featureAsGeoJSON);
+  postFeature(postFeatureCallback, this, featureAsGeoJSON);
 }
 
 /**
@@ -145,7 +147,7 @@ function postFeature(callback, scope, params) {
     type: 'POST',
     dataType: 'json',
     contentType: 'application/json; charset=utf-8',
-    url: urlAPI,
+    url: URL_API,
     data: params,
     timeout: 10000,
     success: function(data) {
@@ -174,6 +176,7 @@ function postFeature(callback, scope, params) {
 function postFeatureCallback(data) {
   console.log(data);
   $('#panelProperties').addClass('hidden');
+  refreshLayer();
 };
 
 /**
@@ -200,15 +203,18 @@ polygonTool.onclick = function(e) {
 
 //chargement des couches externes
 function loadLayerBouchon() {
-  var data = '[{"id":2,"message":"Projet 42 en cours, DO NOT DISTURB !!!","geom":[2.2027587890625004,48.91031590355533],"long_message":"Ceci est une alerte de ecole 42.","url":"http:\/\/www.paris.fr\/necmergitur","category":"Hackathon"}]';
+  var data = '[{"id":2,"message":"Projet 42 en cours, DO NOT DISTURB !!!","geom":[[[2.274169921875,48.83760528293374],[2.281036376953125,48.7453232421382],[2.4005126953124996,48.7453232421382],[2.37030029296875,48.838509168719526],[2.274169921875,48.83760528293374]]],"long_message":"Ceci est une alerte de ecole 42.","url":"http:\/\/www.paris.fr\/necmergitur","category":"Hackathon"}]';
   data = JSON.parse(data);
   loadLayerCallBack(data);
 }
 
 function loadLayer() {
-  //TODO ajouter URL API
-  var url = "";
-  getJSON(this.loadLayerCallBack, this, url);
+  getJSON(this.loadLayerCallBack, this, URL_API);
+}
+
+function refreshLayer() {
+  console.log('refreshLayer');
+  getJSON(refreshLayerCallBack, this, URL_API);
 }
 
 function getJSON(callback, scope, url, params) {
@@ -258,25 +264,38 @@ function loadLayerCallBack(data) {
           color: 'red'
         })
       })
-    })
+    }),
+    title: 'ALERTES'
   });
 
   map.addLayer(layer);
 };
 
+function refreshLayerCallBack(data) {
+  var mapLayers = map.getLayers();
+  mapLayers.forEach(function(element) {
+    if (element.get('title') == 'ALERTES') {
+      var vectorSource = this.getVectorSource(data);
+      element.setSource(vectorSource);
+    }
+  }, this);
+};
+
 /**
- * Method : loadLayer
  * Renvoi la source de la layer
  */
 function getVectorSource(data) {
   var features = [];
 
   for (var idx in data) {
-    var feature = new ol.Feature({
-    geometry: new ol.geom.Point(data[idx].geom).transform('EPSG:4326', 'EPSG:3857'),
-    name: data[idx].id
-  });
-    features.push(feature);
+    var object = JSON.parse(data[idx].geom);
+    if (object != null && object.coordinates != null) {
+      var feature = new ol.Feature({
+        geometry: new ol.geom.Polygon(object.coordinates).transform('EPSG:4326', 'EPSG:3857'),
+        name: data[idx].id
+      });
+      features.push(feature);
+    }
   }
 
   var vectorSource = new ol.source.Vector({
