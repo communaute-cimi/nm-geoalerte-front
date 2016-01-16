@@ -1,8 +1,10 @@
 //Variable globale:
 var URL_API;
 var feature;
+var draw;
 
 //Configuration de la MAP
+//Couche MapQuest
 var raster = new ol.layer.Tile({
   source: new ol.source.MapQuest({
     layer: 'sat'
@@ -32,6 +34,7 @@ var vector = new ol.layer.Vector({
   })
 });
 
+//couche OSM
 var osm = new ol.layer.Tile({
   source: new ol.source.OSM({
     attributions: [
@@ -45,6 +48,7 @@ var osm = new ol.layer.Tile({
   })
 });
 
+//création de la map
 var map = new ol.Map({
   layers: [osm, vector],
   target: 'map',
@@ -55,7 +59,7 @@ var map = new ol.Map({
   })
 });
 
-
+loadLayer();
 
 
 
@@ -64,7 +68,10 @@ var map = new ol.Map({
 var pointTool = document.getElementById('pointTool');
 var polygonTool = document.getElementById('polygonTool');
 
-var draw; // global so we can remove it later
+
+/**
+ * Ajout d'un outil de dessin à la map
+ */
 function addInteraction(interactionType) {
   if (interactionType !== 'None') {
     var geometryFunction, maxPoints;
@@ -76,7 +83,6 @@ function addInteraction(interactionType) {
     });
 
     //Event déclenché en fin de dessin
-    //TODO: ouvrir un formulaire de saisi
     draw.on('drawend', function(e) {
       //Initialisation de la variable globale feature
       feature = e.feature;
@@ -88,14 +94,20 @@ function addInteraction(interactionType) {
   }
 }
 
+/**
+ * Affichage du formulaire d'attributs
+ */
 function addPanelRenseignement() {
   $('#panelProperties').removeClass('hidden');
-  $('#saveBtn').on('click' , this, function(){
+  $('#saveBtn').on('click', this, function() {
     saveFeature();
   });
 }
 
-function saveFeature(){
+/**
+ * Sauvegarde de la feature
+ */
+function saveFeature() {
   //Ajout des attributs à la feature
   var category = $('#categoryTxt').val();
   var msgShort = $('#msgShortTxt').val();
@@ -112,46 +124,58 @@ function saveFeature(){
   console.log(featureAsGeoJSON);
 }
 
-function getFeatureAsGeoJSON(feature){
+/**
+ * Transformation d'une feature en feature
+ * au format geoJSON
+ */
+function getFeatureAsGeoJSON(feature) {
   var geoJSON = new ol.format.GeoJSON();
   return geoJSON.writeFeature(feature, {
-        dataProjection: 'EPSG:4326',
-        featureProjection: 'EPSG:3857'
-      });
+    dataProjection: 'EPSG:4326',
+    featureProjection: 'EPSG:3857'
+  });
 }
 
+/**
+ * Appel AJAX POST de la feature
+ */
 function postFeature(callback, scope, params) {
-    console.log('savefeature');
-    $.ajax({
-      type: 'POST',
-      dataType: 'json',
-      contentType: 'application/json; charset=utf-8',
-      url: urlAPI,
-      data: params,
-      timeout: 10000,
-      success: function(data) {
-        callback.call(scope, data);
+  console.log('savefeature');
+  $.ajax({
+    type: 'POST',
+    dataType: 'json',
+    contentType: 'application/json; charset=utf-8',
+    url: urlAPI,
+    data: params,
+    timeout: 10000,
+    success: function(data) {
+      callback.call(scope, data);
+    },
+    statusCode: {
+      403: function() {
+        alert('Opération interdite');
       },
-      statusCode: {
-        403: function() {
-          alert('Opération interdite');
-        },
-        404: function() {
-          alert('Ressource introuvable');
-        },
-        500: function(data) {
-          alert('erreur serveur interne');
-        }
+      404: function() {
+        alert('Ressource introuvable');
       },
-      error: function(err) {
-        console.log(err);
+      500: function(data) {
+        alert('erreur serveur interne');
       }
-    });
-  };
+    },
+    error: function(err) {
+      console.log(err);
+    }
+  });
+};
 
-function saveFeatureCallBack(){
-
-}
+/**
+ * Callback du POST
+ */
+function postFeatureCallback(data) {
+  console.log(data);
+  $('#panelProperties').addClass('hidden');
+  this.control.control();
+};
 
 /**
  * Activation de l'outil ponctuel
@@ -169,4 +193,66 @@ pointTool.onclick = function(e) {
 polygonTool.onclick = function(e) {
   map.removeInteraction(draw);
   addInteraction('Polygon');
+};
+
+
+
+
+
+//chargement des couches externes
+function loadLayer() {
+  //TODO ajouter URL API
+  var url = "";
+  getJSON(this.loadLayerCallBack, this, url);
+}
+
+function getJSON(callback, scope, url, params) {
+
+  $.ajax({
+    type: 'GET',
+    dataType: 'json',
+    url: url,
+    data: params,
+    timeout: 10000,
+    success: function(data) {
+      callback.call(scope, data);
+    },
+    statusCode: {
+      403: function() {
+        alert('Opération interdite');
+      },
+      404: function() {
+        alert('Ressource introuvable');
+      },
+      500: function() {
+        alert('Erreur interne');
+      }
+    },
+    error: function(err) {
+      console.log(err);
+    }
+  });
+};
+
+function loadLayerCallBack(data) {
+  var vectorSource = this.getVectorSource(data);
+
+  var layer = new ol.layer.Vector({
+    source: vectorSource,
+  });
+
+  map.addlayer(layer);
+};
+
+/**
+ * Method : loadLayer
+ * Renvoi la source de la layer
+ */
+function getVectorSource(data) {
+  var vectorSource = new ol.source.Vector({
+    features: (new ol.format.GeoJSON()).readFeatures(data, {
+      dataProjection: 'EPSG:4326',
+      featureProjection: 'EPSG:3857'
+    })
+  });
 };
