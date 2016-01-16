@@ -14,7 +14,7 @@ body { overflow: hidden; }
 	position: absolute;
     width: 400px;
     right: 0;
-    top: 0;
+    top: 10px;
     left: 0;
     bottom: 0;
     height: 100%;

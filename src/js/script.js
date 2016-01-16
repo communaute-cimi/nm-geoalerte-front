@@ -1,5 +1,6 @@
 //Variable globale:
 var URL_API = "http://192.168.99.100:8000/public/alerts";
+var ALERTE_LYR_TITLE = "ALERTES"
 var feature;
 var draw;
 
@@ -90,8 +91,17 @@ function addInteraction(interactionType) {
 
       //affichage du panel d'attributs
       addPanelRenseignement();
+
+      //suppression de l'interaction
+      removeInteraction(draw);
     });
     map.addInteraction(draw);
+  }
+}
+
+function removeInteraction(interactionType) {
+  if (interactionType !== 'None') {
+    map.removeInteraction(interactionType);
   }
 }
 
@@ -114,11 +124,13 @@ function saveFeature() {
   var msgShort = $('#msgShortTxt').val();
   var msgLong = $('#msgLongTxt').val();
   var url = $('#urlTxt').val();
+  var source = $('#sourceTxt').val();
 
   feature.set('category', category);
   feature.set('message', msgShort);
   feature.set('long_message', msgLong);
   feature.set('url', url);
+  feature.set('source', source);
 
   //Transformation de la feature en geoJSON
   var featureAsGeoJSON = getFeatureAsGeoJSON(feature);
@@ -208,15 +220,24 @@ function loadLayerBouchon() {
   loadLayerCallBack(data);
 }
 
+/**
+ * Chargement de la layer
+ */
 function loadLayer() {
   getJSON(this.loadLayerCallBack, this, URL_API);
 }
 
+/**
+ * Refresh de la layer
+ */
 function refreshLayer() {
   console.log('refreshLayer');
   getJSON(refreshLayerCallBack, this, URL_API);
 }
 
+/**
+ * Récupération des zones alertes depuis API GEO-ALERTE
+ */
 function getJSON(callback, scope, url, params) {
 
   $.ajax({
@@ -245,6 +266,9 @@ function getJSON(callback, scope, url, params) {
   });
 };
 
+/**
+ * Callback du GET alertes
+ */
 function loadLayerCallBack(data) {
   var vectorSource = this.getVectorSource(data);
 
@@ -265,16 +289,19 @@ function loadLayerCallBack(data) {
         })
       })
     }),
-    title: 'ALERTES'
+    title: ALERTE_LYR_TITLE
   });
 
   map.addLayer(layer);
 };
 
+/**
+ * Callback du refreshlayer
+ */
 function refreshLayerCallBack(data) {
   var mapLayers = map.getLayers();
   mapLayers.forEach(function(element) {
-    if (element.get('title') == 'ALERTES') {
+    if (element.get('title') == ALERTE_LYR_TITLE) {
       var vectorSource = this.getVectorSource(data);
       element.setSource(vectorSource);
     }
