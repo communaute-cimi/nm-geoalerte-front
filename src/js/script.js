@@ -1,5 +1,5 @@
 //Variable globale:
-var URL_API = "http://192.168.99.100:8000/public/alerts";
+var URL_API = "http://192.168.99.100:8000/public/v1/alerts";
 var ALERTE_LYR_TITLE = "ALERTES"
 var feature;
 var draw;
@@ -74,7 +74,7 @@ var polygonTool = document.getElementById('polygonTool');
 /**
  * Ajout d'un outil de dessin à la map
  */
-function addInteraction(interactionType) {
+function addDrawInteraction(interactionType) {
   if (interactionType !== 'None') {
     var geometryFunction, maxPoints;
     var value = interactionType;
@@ -93,13 +93,16 @@ function addInteraction(interactionType) {
       addPanelRenseignement();
 
       //suppression de l'interaction
-      removeInteraction(draw);
+      removeDrawInteraction(draw);
     });
     map.addInteraction(draw);
   }
 }
 
-function removeInteraction(interactionType) {
+/**
+ * Suppression d'un outil de dessin de la map
+ */
+function removeDrawInteraction(interactionType) {
   if (interactionType !== 'None') {
     map.removeInteraction(interactionType);
   }
@@ -197,7 +200,7 @@ function postFeatureCallback(data) {
  */
 pointTool.onclick = function(e) {
   map.removeInteraction(draw);
-  addInteraction('Point');
+  addDrawInteraction('Point');
 };
 
 /**
@@ -206,7 +209,7 @@ pointTool.onclick = function(e) {
  */
 polygonTool.onclick = function(e) {
   map.removeInteraction(draw);
-  addInteraction('Polygon');
+  addDrawInteraction('Polygon');
 };
 
 
