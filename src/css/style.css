@@ -1,0 +1,13 @@
+body { overflow: hidden; }
+.navbar-offset { margin-top: 50px; }
+#map { position: absolute; top: 50px; bottom: 0px; left: 0px; right: 0px; }
+#map .ol-zoom { font-size: 1.2em; top:23px; background-color: #337ab7; border-color: #2e6da4}
+
+.zoom-top-opened-sidebar { margin-top: 5px; }
+.zoom-top-collapsed { margin-top: 45px; }
+
+#map { z-index: 35; }
+
+.sidebar { z-index: 45; }
+
+.main-row { position: relative; top: 0; }
