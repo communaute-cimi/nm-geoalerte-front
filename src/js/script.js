@@ -343,26 +343,32 @@ function addModifyInteraction() {
    */
   function loadLayerCallBack(data) {
     var vectorSource = this.getVectorSource(data);
+    var style = new ol.style.Style({
+            image: new ol.style.Circle({
+                fill: new ol.style.Fill({
+                    color: 'rgba(255,0,0,0.5)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'rgba(255,0,0,0.5)',
+                    width: 1.25
+                }),
+                radius: 5
+            }),
+            fill: new ol.style.Fill({
+                color: 'rgba(255,0,0,0.5)'
+            }),
+            stroke: new ol.style.Stroke({
+                color: 'rgba(255,0,0,0.5)',
+                width: 2.5
+            })
+        });
 
     var layer = new ol.layer.Vector({
       source: vectorSource,
-      style: new ol.style.Style({
-        fill: new ol.style.Fill({
-          color: 'red'
-        }),
-        stroke: new ol.style.Stroke({
-          color: 'red',
-          width: 2
-        }),
-        image: new ol.style.Circle({
-          radius: 7,
-          fill: new ol.style.Fill({
-            color: 'red'
-          })
-        })
-      }),
+      style: style,
       title: ALERTE_LYR_TITLE
     });
+
 
     map.addLayer(layer);
   };
