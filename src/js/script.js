@@ -1,5 +1,5 @@
 //Variable globale:
-var URL_API = "http://192.168.99.100:8000/public/v1/alerts";
+var URL_API = "http://geoalerte.info/public/v1/alerts";
 var ALERTE_LYR_TITLE = "ALERTES"
 var feature;
 var draw;
