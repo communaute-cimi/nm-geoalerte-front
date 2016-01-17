@@ -3,6 +3,8 @@ var URL_API = "http://192.168.99.100:8000/public/v1/alerts";
 var ALERTE_LYR_TITLE = "ALERTES"
 var feature;
 var draw;
+var modify;
+var select;
 
 //Configuration de la MAP
 //Couche MapQuest
@@ -65,10 +67,11 @@ loadLayer();
 
 
 
-
 //Configuration de l'outil de saisie
 var pointTool = document.getElementById('pointTool');
 var polygonTool = document.getElementById('polygonTool');
+var polygonModifyTool = document.getElementById('polygonModifyTool');
+var cancelButton = document.getElementById('cancelBtn');
 
 
 /**
@@ -99,238 +102,309 @@ function addDrawInteraction(interactionType) {
   }
 }
 
-/**
- * Suppression d'un outil de dessin de la map
- */
-function removeDrawInteraction(interactionType) {
-  if (interactionType !== 'None') {
-    map.removeInteraction(interactionType);
-  }
-}
-
-/**
- * Affichage du formulaire d'attributs
- */
-function addPanelRenseignement() {
-  $('#panelProperties').removeClass('hidden');
-  $('#saveBtn').on('click', this, function() {
-    saveFeature();
-  });
-}
-
-/**
- * Sauvegarde de la feature
- */
-function saveFeature() {
-  //Ajout des attributs à la feature
-  var category = $('#categoryTxt').val();
-  var msgShort = $('#msgShortTxt').val();
-  var msgLong = $('#msgLongTxt').val();
-  var url = $('#urlTxt').val();
-  var source = $('#sourceTxt').val();
-
-  feature.set('category', category);
-  feature.set('message', msgShort);
-  feature.set('long_message', msgLong);
-  feature.set('url', url);
-  feature.set('source', source);
-
-  //Transformation de la feature en geoJSON
-  var featureAsGeoJSON = getFeatureAsGeoJSON(feature);
-  console.log(featureAsGeoJSON);
-  postFeature(postFeatureCallback, this, featureAsGeoJSON);
-}
-
-/**
- * Transformation d'une feature en feature
- * au format geoJSON
- */
-function getFeatureAsGeoJSON(feature) {
-  var geoJSON = new ol.format.GeoJSON();
-  return geoJSON.writeFeature(feature, {
-    dataProjection: 'EPSG:4326',
-    featureProjection: 'EPSG:3857'
-  });
-}
-
-/**
- * Appel AJAX POST de la feature
- */
-function postFeature(callback, scope, params) {
-  console.log('savefeature');
-  $.ajax({
-    type: 'POST',
-    dataType: 'json',
-    contentType: 'application/json; charset=utf-8',
-    url: URL_API,
-    data: params,
-    timeout: 10000,
-    success: function(data) {
-      callback.call(scope, data);
-    },
-    statusCode: {
-      403: function() {
-        alert('Opération interdite');
-      },
-      404: function() {
-        alert('Ressource introuvable');
-      },
-      500: function(data) {
-        alert('erreur serveur interne');
-      }
-    },
-    error: function(err) {
-      console.log(err);
-    }
-  });
-};
-
-/**
- * Callback du POST
- */
-function postFeatureCallback(data) {
-  console.log(data);
-  $('#panelProperties').addClass('hidden');
-  refreshLayer();
-};
-
-/**
- * Activation de l'outil ponctuel
- * @param {Event} e Change event.
- */
-pointTool.onclick = function(e) {
-  map.removeInteraction(draw);
-  addDrawInteraction('Point');
-};
-
-/**
- * Activation de l'outil polygon
- * @param {Event} e Change event.
- */
-polygonTool.onclick = function(e) {
-  map.removeInteraction(draw);
-  addDrawInteraction('Polygon');
-};
-
-
-
-
-
-//chargement des couches externes
-function loadLayerBouchon() {
-  var data = '[{"id":2,"message":"Projet 42 en cours, DO NOT DISTURB !!!","geom":[[[2.274169921875,48.83760528293374],[2.281036376953125,48.7453232421382],[2.4005126953124996,48.7453232421382],[2.37030029296875,48.838509168719526],[2.274169921875,48.83760528293374]]],"long_message":"Ceci est une alerte de ecole 42.","url":"http:\/\/www.paris.fr\/necmergitur","category":"Hackathon"}]';
-  data = JSON.parse(data);
-  loadLayerCallBack(data);
-}
-
-/**
- * Chargement de la layer
- */
-function loadLayer() {
-  getJSON(this.loadLayerCallBack, this, URL_API);
-}
-
-/**
- * Refresh de la layer
- */
-function refreshLayer() {
-  console.log('refreshLayer');
-  getJSON(refreshLayerCallBack, this, URL_API);
-}
-
-/**
- * Récupération des zones alertes depuis API GEO-ALERTE
- */
-function getJSON(callback, scope, url, params) {
-
-  $.ajax({
-    type: 'GET',
-    dataType: 'json',
-    url: url,
-    data: params,
-    timeout: 10000,
-    success: function(data) {
-      callback.call(scope, data);
-    },
-    statusCode: {
-      403: function() {
-        alert('Opération interdite');
-      },
-      404: function() {
-        alert('Ressource introuvable');
-      },
-      500: function() {
-        alert('Erreur interne');
-      }
-    },
-    error: function(err) {
-      console.log(err);
-    }
-  });
-};
-
-/**
- * Callback du GET alertes
- */
-function loadLayerCallBack(data) {
-  var vectorSource = this.getVectorSource(data);
-
-  var layer = new ol.layer.Vector({
-    source: vectorSource,
-    style: new ol.style.Style({
-      fill: new ol.style.Fill({
-        color: 'red'
-      }),
-      stroke: new ol.style.Stroke({
-        color: 'red',
-        width: 2
-      }),
-      image: new ol.style.Circle({
-        radius: 7,
-        fill: new ol.style.Fill({
-          color: 'red'
-        })
-      })
-    }),
-    title: ALERTE_LYR_TITLE
-  });
-
-  map.addLayer(layer);
-};
-
-/**
- * Callback du refreshlayer
- */
-function refreshLayerCallBack(data) {
+function addModifyInteraction() {
+  var alerteLyr;
   var mapLayers = map.getLayers();
   mapLayers.forEach(function(element) {
     if (element.get('title') == ALERTE_LYR_TITLE) {
-      var vectorSource = this.getVectorSource(data);
-      element.setSource(vectorSource);
+      alerteLyr = element;
     }
   }, this);
-};
 
-/**
- * Renvoi la source de la layer
- */
-function getVectorSource(data) {
-  var features = [];
+  select = new ol.interaction.Select({
+    wrapX: false
+  });
 
-  for (var idx in data) {
-    var object = JSON.parse(data[idx].geom);
-    if (object != null && object.coordinates != null) {
-      var feature = new ol.Feature({
-        geometry: new ol.geom.Polygon(object.coordinates).transform('EPSG:4326', 'EPSG:3857'),
-        name: data[idx].id
+  modify = new ol.interaction.Modify({
+      features: select.getFeatures(),
+      // the SHIFT key must be pressed to delete vertices, so
+      // that new vertices can be drawn at the same position
+      // of existing vertices
+      deleteCondition: function(event) {
+        return ol.events.condition.shiftKeyOnly(event) &&
+          ol.events.condition.singleClick(event);
+        }
       });
-      features.push(feature);
+
+    select.on('select', function(event) {
+      console.log("select");
+      if (event.selected.length > 0) {
+        addPanelRenseignement();
+        var feature = event.selected[0];
+        addAttributesToPanel(feature);
+      }
+    });
+
+    map.addInteraction(select);
+    map.addInteraction(modify); 
+
+  }
+
+  function addAttributesToPanel(feature) {
+    $('#categoryTxt').val(feature.get('category'));
+    $('#msgShortTxt').val(feature.get('message'));
+    $('#msgLongTxt').val(feature.get('long_message'));
+    $('#urlTxt').val(feature.get('url'));
+    $('#sourceTxt').val(feature.get('emetteur'));
+  }
+
+  function removeModifyInteraction() {
+    map.removeInteraction(modify);
+    map.removeInteraction(select);
+  }
+
+  /**
+   * Suppression d'un outil de dessin de la map
+   */
+  function removeDrawInteraction(interactionType) {
+    if (interactionType !== 'None') {
+      map.removeInteraction(interactionType);
     }
   }
 
-  var vectorSource = new ol.source.Vector({
-    features: features
-  });
+  /**
+   * Affichage du formulaire d'attributs
+   */
+  function addPanelRenseignement() {
+    $('#panelProperties').removeClass('hidden');
+    $('#saveBtn').on('click', this, function() {
+      saveFeature();
+    });
+  }
 
-  return vectorSource;
-};
+  /**
+   * Sauvegarde de la feature
+   */
+  function saveFeature() {
+    //Ajout des attributs à la feature
+    var category = $('#categoryTxt').val();
+    var msgShort = $('#msgShortTxt').val();
+    var msgLong = $('#msgLongTxt').val();
+    var url = $('#urlTxt').val();
+    var source = $('#sourceTxt').val();
+
+    feature.set('category', category);
+    feature.set('message', msgShort);
+    feature.set('long_message', msgLong);
+    feature.set('url', url);
+    feature.set('source', source);
+
+    //Transformation de la feature en geoJSON
+    var featureAsGeoJSON = getFeatureAsGeoJSON(feature);
+    console.log(featureAsGeoJSON);
+    postFeature(postFeatureCallback, this, featureAsGeoJSON);
+  }
+
+  /**
+   * Transformation d'une feature en feature
+   * au format geoJSON
+   */
+  function getFeatureAsGeoJSON(feature) {
+    var geoJSON = new ol.format.GeoJSON();
+    return geoJSON.writeFeature(feature, {
+      dataProjection: 'EPSG:4326',
+      featureProjection: 'EPSG:3857'
+    });
+  }
+
+  /**
+   * Appel AJAX POST de la feature
+   */
+  function postFeature(callback, scope, params) {
+    console.log('savefeature');
+    $.ajax({
+      type: 'POST',
+      dataType: 'json',
+      contentType: 'application/json; charset=utf-8',
+      url: URL_API,
+      data: params,
+      timeout: 10000,
+      success: function(data) {
+        callback.call(scope, data);
+      },
+      statusCode: {
+        403: function() {
+          alert('Opération interdite');
+        },
+        404: function() {
+          alert('Ressource introuvable');
+        },
+        500: function(data) {
+          alert('erreur serveur interne');
+        }
+      },
+      error: function(err) {
+        console.log(err);
+      }
+    });
+  };
+
+  /**
+   * Callback du POST
+   */
+  function postFeatureCallback(data) {
+    console.log(data);
+    $('#panelProperties').addClass('hidden');
+    refreshLayer();
+  };
+
+  /**
+   * Activation de l'outil ponctuel
+   * @param {Event} e Change event.
+   */
+  pointTool.onclick = function(e) {
+    map.removeInteraction(draw);
+    addDrawInteraction('Point');
+  };
+
+  /**
+   * Activation de l'outil polygon
+   * @param {Event} e Change event.
+   */
+  polygonTool.onclick = function(e) {
+    map.removeInteraction(draw);
+    removeModifyInteraction();
+    addDrawInteraction('Polygon');
+  };
+
+  /**
+   * Activation de l'outil polygon
+   * @param {Event} e Change event.
+   */
+  polygonModifyTool.onclick = function(e) {
+    map.removeInteraction(draw);
+    addModifyInteraction();
+  };
+
+/**
+   * Activation de l'outil polygon
+   * @param {Event} e Change event.
+   */
+  cancelButton.onclick = function(e) {
+    $('#panelProperties').addClass('hidden');
+  };
+
+
+  //chargement des couches externes
+  function loadLayerBouchon() {
+    var data = '[{"id":2,"message":"Projet 42 en cours, DO NOT DISTURB !!!","geom":{"type":"Polygon","coordinates":[[[2.2219848632812,48.818167793351],[2.2219848632812,48.775650278076],[2.3524475097656,48.775650278076],[2.35107421875,48.808220115534],[2.2219848632812,48.818167793351]]]},"long_message":"Ceci est une alerte de ecole 42.","url":"http:\/\/www.paris.fr\/necmergitur","category":"Hackathon"}]';
+    data = JSON.parse(data);
+    loadLayerCallBack(data);
+  }
+
+  /**
+   * Chargement de la layer
+   */
+  function loadLayer() {
+    getJSON(this.loadLayerCallBack, this, URL_API);
+  }
+
+  /**
+   * Refresh de la layer
+   */
+  function refreshLayer() {
+    console.log('refreshLayer');
+    getJSON(refreshLayerCallBack, this, URL_API);
+  }
+
+  /**
+   * Récupération des zones alertes depuis API GEO-ALERTE
+   */
+  function getJSON(callback, scope, url, params) {
+
+    $.ajax({
+      type: 'GET',
+      dataType: 'json',
+      url: url,
+      data: params,
+      timeout: 10000,
+      success: function(data) {
+        callback.call(scope, data);
+      },
+      statusCode: {
+        403: function() {
+          alert('Opération interdite');
+        },
+        404: function() {
+          alert('Ressource introuvable');
+        },
+        500: function() {
+          alert('Erreur interne');
+        }
+      },
+      error: function(err) {
+        console.log(err);
+      }
+    });
+  };
+
+  /**
+   * Callback du GET alertes
+   */
+  function loadLayerCallBack(data) {
+    var vectorSource = this.getVectorSource(data);
+
+    var layer = new ol.layer.Vector({
+      source: vectorSource,
+      style: new ol.style.Style({
+        fill: new ol.style.Fill({
+          color: 'red'
+        }),
+        stroke: new ol.style.Stroke({
+          color: 'red',
+          width: 2
+        }),
+        image: new ol.style.Circle({
+          radius: 7,
+          fill: new ol.style.Fill({
+            color: 'red'
+          })
+        })
+      }),
+      title: ALERTE_LYR_TITLE
+    });
+
+    map.addLayer(layer);
+  };
+
+  /**
+   * Callback du refreshlayer
+   */
+  function refreshLayerCallBack(data) {
+    var mapLayers = map.getLayers();
+    mapLayers.forEach(function(element) {
+      if (element.get('title') == ALERTE_LYR_TITLE) {
+        var vectorSource = this.getVectorSource(data);
+        element.setSource(vectorSource);
+      }
+    }, this);
+  };
+
+  /**
+   * Renvoi la source de la layer
+   */
+  function getVectorSource(data) {
+    var features = [];
+
+    for (var idx in data) {
+      var object = JSON.parse(data[idx].geom);
+      if (object != null && object.coordinates != null) {
+        var feature = new ol.Feature({
+          geometry: new ol.geom.Polygon(object.coordinates).transform('EPSG:4326', 'EPSG:3857'),
+          name: data[idx].id,
+          emetteur: data[idx].emetteur,
+          message : data[idx].message,
+          long_message: data[idx].long_message,
+          category : data[idx].category,
+          url : data[idx].url
+        });
+        features.push(feature);
+      }
+    }
+
+    var vectorSource = new ol.source.Vector({
+      features: features
+    });
+
+    return vectorSource;
+  };
